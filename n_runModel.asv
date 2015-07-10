@@ -1,4 +1,4 @@
-function p = n_runModel()
+function [] = n_runModel()
 %Run this function.
 %This function will loop through 3 conditions: Dichoptic gratings,
 %monocular plaids, and binocular plaids
@@ -14,7 +14,7 @@ function p = n_runModel()
 %Said and Heeger (2013) A model of binocular rivalry and cross-orientation
 %suppression. PLOS Computational Biology.
 
-c = 0.5; %contrast
+c = .5; %contrast
 iA_amp_opts = {[0 c]; [c 0]; [c c]}; %dichoptic grating, monocular plaid, binocular plaids
 iB_amp_opts = {[c 0]; [c 0]; [c c]}; %dichoptic grating, monocular plaid, binocular plaids
 condnames =  {'Dich. Gratings', 'Mon. Plaid', 'Bin. Plaid'};
@@ -22,7 +22,7 @@ layernames =  {'L. Monocular', 'R. Monocular', 'Summation', 'L-R Opponency', 'R-
 p.sigma         = .5;       %semisaturation constant
 p.sigma_opp     = .9;       %semisaturation constant for opponency cells
 p.tau           = 50;       %time constant (ms)
-p.dt            = 1000/1024;        %time-step (ms)
+p.dt            = 5;        %time-step (ms)
 p.T             = 20000;    %duration (ms)
 p.noisefilter_t = 800;      %(ms)
 p.noiseamp      = .03;      
@@ -47,15 +47,14 @@ end
 subplotlocs = [4 6 2 1 3]; %on a 2x3 plot
 
 %loop through conditions
-for cond = 1;
+for cond = 1:3;
     %stimulus inputs to monocular layers
     for lay = 1:2
 %         p.iA{lay} = iA_amp_opts{cond}(lay)*ones(1,p.nt);
 %         p.iB{lay} = iB_amp_opts{cond}(lay)*ones(1,p.nt);
         sq_wave = square( linspace( 0, 2*pi*p.T*freq{lay}/1000, p.nt) );
-        sq_wave(sq_wave<0) = 0;
-        p.iA{lay} = iA_amp_opts{cond}(lay) * sq_wave;
-        p.iB{lay} = iB_amp_opts{cond}(lay) * sq_wave;
+        p.iA{lay} = iA_amp_opts{cond}(lay)*ones(1,p.nt);
+        p.iB{lay} = iB_amp_opts{cond}(lay)*ones(1,p.nt);
     end
      
     %run the model
@@ -83,8 +82,8 @@ end
 figure
 cla; hold on;
 barh(3,wta(1), 'FaceColor', [.6 .6 .6]);
-% barh(2,wta(2), 'FaceColor', [.6 .6 .6]);
-% barh(1,wta(3), 'FaceColor', [.6 .6 .6]);
+barh(2,wta(2), 'FaceColor', [.6 .6 .6]);
+barh(1,wta(3), 'FaceColor', [.6 .6 .6]);
 xlabel('Winner-take-all index','FontSize',20)
 set(gca,'YTick', [1 2 3], 'YLim', [.3 3.7], 'XTick', [0 .2 .4 .6 .8 1], 'XLim', [0 1], 'FontSize', 14)
 set(gca,'YTickLabel', {'Bin. plaids', 'Mon. plaid', 'Dich. gratings'});

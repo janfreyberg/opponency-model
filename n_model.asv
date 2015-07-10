@@ -52,7 +52,7 @@ for t = p.dt:p.dt:p.T
         %normalization
         fA = halfExp(p.dA{lay}(idx),2) / (sum(halfExp(pool,2)));
         fB = halfExp(p.dB{lay}(idx),2) / (sum(halfExp(pool,2)));
-    
+        
         %update firing rates
         p.rA{lay}(idx) = p.rA{lay}(idx-1) + (p.dt/p.tau)*(-p.rA{lay}(idx-1) + fA);
         p.rB{lay}(idx) = p.rB{lay}(idx-1) + (p.dt/p.tau)*(-p.rB{lay}(idx-1) + fB);
