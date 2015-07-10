@@ -1,3 +1,8 @@
+Branch: "oscillating"
+-------------
+This branch was specifically made to model oscillating input.
+
+
 Instructions
 -------------
 
