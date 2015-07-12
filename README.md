@@ -5,9 +5,12 @@ This branch compares three perturbations possibly present in autism: Increased/D
 Instructions
 -------------
 
-To run the model, just enter
+To run the original model, just enter
 `n_runModel`
 into Matlab.
+
+To compare across possible perturbations, run the 'n_runModel_XXX' scripts.
+You can edit how often the scripts iterate by changing the "iter" variable. You can change computational load per iteration by changing the p.dt variable in each script. This determines how fine the time steps are when running using the Euler method.
 
 If you use this, please cite
 Said and Heeger (2013) A model of binocular rivalry and cross-orientation
