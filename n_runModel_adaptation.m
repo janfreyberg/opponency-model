@@ -15,13 +15,13 @@ function [] = n_runModel()
 %suppression. PLOS Computational Biology.
 
 c = .5; %contrast
-iA_amp_opts = {[0 c]; [c 0]; [c c]}; %dichoptic grating, monocular plaid, binocular plaids
-iB_amp_opts = {[c 0]; [c 0]; [c c]}; %dichoptic grating, monocular plaid, binocular plaids
+iA_amp_opts = [0 c]; %dichoptic grating, monocular plaid, binocular plaids
+iB_amp_opts = [c 0]; %dichoptic grating, monocular plaid, binocular plaids
 condnames =  {'Dich. Gratings', 'Mon. Plaid', 'Bin. Plaid'};
 layernames =  {'L. Monocular', 'R. Monocular', 'Summation', 'L-R Opponency', 'R-L Opponency'};
 p.sigma         = .5;       %semisaturation constant
 p.sigma_opp     = .9;       %semisaturation constant for opponency cells
-p.tau           = 50;       %time constant (ms)
+taus = [50, 100, 150]; %time constants that are iterated through (ms)
 p.dt            = 5;        %time-step (ms)
 p.T             = 20000;    %duration (ms)
 p.noisefilter_t = 800;      %(ms)
@@ -42,14 +42,14 @@ for lay=1:5 %go through maximum possible layers. This way, if there are <5 layer
 end
 
 
-subplotlocs = [4 6 2 1 3]; %on a 2x3 plot
 
 %loop through conditions
-for cond = 1:3;
+for cond = 1:numel(taus);
+    p.tau = taus(cond);
     %stimulus inputs to monocular layers
     for lay = 1:2
-        p.iA{lay} = iA_amp_opts{cond}(lay)*ones(1,p.nt);
-        p.iB{lay} = iB_amp_opts{cond}(lay)*ones(1,p.nt);
+        p.iA{lay} = iA_amp_opts(lay)*ones(1,p.nt);
+        p.iB{lay} = iB_amp_opts(lay)*ones(1,p.nt);
     end
      
     %run the model
@@ -58,29 +58,31 @@ for cond = 1:3;
     %compute WTA index from summation layer
     wta(cond) = nanmean(abs(p.rA{3}-p.rB{3})./(p.rA{3}+p.rB{3}));
 
-    cpsFigure(3,1)
-    set(gcf,'Name',condnames{cond})
-    for lay = 1:p.nLayers
-        subplot(2,3,subplotlocs(lay))
-        cla; hold on;
-        p1 = plot(p.tlist/1000,p.rA{lay},'color',[1 0 1]);
-        p2 = plot(p.tlist/1000,p.rB{lay},'color',[0 0 1]);
-        legend([p1 p2], 'A','B')
-        ylabel('Firing rate')
-        xlabel('Time (s)')
-        title(layernames(lay))
-        set(gca,'YLim',[0 1]);
-    end
+%     cpsFigure(3,1)
+%     set(gcf,'Name',condnames{cond})
+%     for lay = 1:p.nLayers
+%         subplot(2,3,subplotlocs(lay))
+%         cla; hold on;
+%         p1 = plot(p.tlist/1000,p.rA{lay},'color',[1 0 1]);
+%         p2 = plot(p.tlist/1000,p.rB{lay},'color',[0 0 1]);
+%         legend([p1 p2], 'A','B')
+%         ylabel('Firing rate')
+%         xlabel('Time (s)')
+%         title(layernames(lay))
+%         set(gca,'YLim',[0 1]);
+%     end
 end
 
 
 figure
 cla; hold on;
-barh(3,wta(1), 'FaceColor', [.6 .6 .6]);
-barh(2,wta(2), 'FaceColor', [.6 .6 .6]);
-barh(1,wta(3), 'FaceColor', [.6 .6 .6]);
+ylabel_array = {};
+for cond = 1:numel(taus)
+    barh(cond, wta(cond), 'FaceColor', [0.6 0.6 0.6]);
+    ylabel_array = [ylabel_array, {['tau=', num2str(taus(cond))]}];
+end
 xlabel('Winner-take-all index','FontSize',20)
-set(gca,'YTick', [1 2 3], 'YLim', [.3 3.7], 'XTick', [0 .2 .4 .6 .8 1], 'XLim', [0 1], 'FontSize', 14)
-set(gca,'YTickLabel', {'Bin. plaids', 'Mon. plaid', 'Dich. gratings'});
+set(gca,'YTick', 1:numel(taus), 'YLim', [0 numel(taus)+1], 'XTick', [0 .2 .4 .6 .8 1], 'XLim', [0 1], 'FontSize', 14)
+set(gca,'YTickLabel', ylabel_array);
 set(gca,'FontSize',20);
 
