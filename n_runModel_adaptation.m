@@ -17,8 +17,6 @@ function [] = n_runModel_adaptation()
 c = .5; %contrast
 iA_amp_opts = [0 c]; %dichoptic grating, monocular plaid, binocular plaids
 iB_amp_opts = [c 0]; %dichoptic grating, monocular plaid, binocular plaids
-condnames =  {'Dich. Gratings', 'Mon. Plaid', 'Bin. Plaid'};
-layernames =  {'L. Monocular', 'R. Monocular', 'Summation', 'L-R Opponency', 'R-L Opponency'};
 p.sigma         = .5;       %semisaturation constant
 p.sigma_opp     = .9;       %semisaturation constant for opponency cells
 taus = [50, 100, 150]; %time constants that are iterated through (ms)
@@ -29,22 +27,29 @@ p.noiseamp      = .03;
 p.nLayers       = 5;        %set to 3 for conventional model, 5 for opponency model
 p.nt            = p.T/p.dt+1;
 p.tlist         = 0:p.dt:p.T;
+niter = 10;
+wta_list = zeros(niter, numel(taus));
 
-%Initializing time-courses for neuron (d)rives, (r)esponses, and (n)oise.
-%Each neuron is tuned to either orientation A or B.
-for lay=1:5 %go through maximum possible layers. This way, if there are <5 layers, the feedback can be zero.
-    p.dA{lay}   = zeros(1,p.nt);
-    p.dB{lay}   = zeros(1,p.nt);
-    p.rA{lay}   = zeros(1,p.nt);
-    p.rB{lay}   = zeros(1,p.nt);
-    p.nA{lay}   = n_makeNoise(p);
-    p.nB{lay}   = n_makeNoise(p);
-end
 
+fprintf('Iteration: 0'); % display progress at cmd
+for iter = 1:niter
+fprintf(['\b', num2str(iter)]); % update progress
 
 
 %loop through conditions
 for cond = 1:numel(taus);
+    
+    %Initializing time-courses for neuron (d)rives, (r)esponses, and (n)oise.
+    %Each neuron is tuned to either orientation A or B.
+    for lay=1:5 %go through maximum possible layers. This way, if there are <5 layers, the feedback can be zero.
+        p.dA{lay}   = zeros(1,p.nt);
+        p.dB{lay}   = zeros(1,p.nt);
+        p.rA{lay}   = zeros(1,p.nt);
+        p.rB{lay}   = zeros(1,p.nt);
+        p.nA{lay}   = n_makeNoise(p);
+        p.nB{lay}   = n_makeNoise(p);
+    end
+
     p.tau = taus(cond);
     %stimulus inputs to monocular layers
     for lay = 1:2
@@ -56,7 +61,7 @@ for cond = 1:numel(taus);
     p = n_model(p);
     
     %compute WTA index from summation layer
-    wta(cond) = nanmean(abs(p.rA{3}-p.rB{3})./(p.rA{3}+p.rB{3}));
+    wta_list(iter, cond) = nanmean(abs(p.rA{3}-p.rB{3})./(p.rA{3}+p.rB{3}));
 
 %     cpsFigure(3,1)
 %     set(gcf,'Name',condnames{cond})
@@ -73,13 +78,15 @@ for cond = 1:numel(taus);
 %     end
 end
 
+end
+
 
 figure
 cla; hold on;
-ylabel_array = {};
+ylabelarray = cell(1, numel(noiseamps));
 for cond = 1:numel(taus)
-    barh(cond, wta(cond), 'FaceColor', [0.6 0.6 0.6]);
-    ylabel_array = [ylabel_array, {['tau=', num2str(taus(cond))]}];
+    barh(cond, mean(wta_list(:, cond), 1), 'FaceColor', [0.6 0.6 0.6]);
+    ylabelarray{cond} = ['tau=', num2str(taus(cond))];
 end
 xlabel('Winner-take-all index','FontSize',20)
 set(gca,'YTick', 1:numel(taus), 'YLim', [0 numel(taus)+1], 'XTick', [0 .2 .4 .6 .8 1], 'XLim', [0 1], 'FontSize', 14)
