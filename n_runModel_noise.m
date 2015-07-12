@@ -17,24 +17,22 @@ function [] = n_runModel()
 c = .5; %contrast
 iA_amp_opts = [0 c]; %dichoptic grating, monocular plaid, binocular plaids
 iB_amp_opts = [c 0]; %dichoptic grating, monocular plaid, binocular plaids
-condnames =  {'Dich. Gratings', 'Mon. Plaid', 'Bin. Plaid'};
-layernames =  {'L. Monocular', 'R. Monocular', 'Summation', 'L-R Opponency', 'R-L Opponency'};
 p.sigma         = .5;       %semisaturation constant
 p.sigma_opp     = .9;       %semisaturation constant for opponency cells
 p.tau           = 50;       %time constant (ms)
 p.dt            = 5;        %time-step (ms)
 p.T             = 20000;    %duration (ms)
 p.noisefilter_t = 800;      %(ms)
-noiseamps = [0.03, 0.05, 0.07, 0.09];
+noiseamps = [0.03, 0.06, 0.09, 0.12];
 p.nLayers       = 5;        %set to 3 for conventional model, 5 for opponency model
 p.nt            = p.T/p.dt+1;
 p.tlist         = 0:p.dt:p.T;
 niter = 10;
 wta_list = zeros(niter, numel(noiseamps));
 
-fprintf('Iteration: 0'); % display progress at cmd
+fprintf('Iteration: 0\n'); % display progress at cmd
 for iter = 1:niter
-fprintf(['\b', num2str(iter)]); % update progress
+fprintf(['\b\b', num2str(iter), '\n']); % update progress
 
 %loop through conditions
 for cond = 1:numel(noiseamps);

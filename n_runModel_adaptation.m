@@ -31,9 +31,9 @@ niter = 10;
 wta_list = zeros(niter, numel(taus));
 
 
-fprintf('Iteration: 0'); % display progress at cmd
+fprintf('Iteration: 0\n'); % display progress at cmd
 for iter = 1:niter
-fprintf(['\b', num2str(iter)]); % update progress
+fprintf(['\b\b', num2str(iter), '\n']); % update progress
 
 
 %loop through conditions
@@ -83,12 +83,12 @@ end
 
 figure
 cla; hold on;
-ylabelarray = cell(1, numel(noiseamps));
+ylabelarray = cell(1, numel(taus));
 for cond = 1:numel(taus)
     barh(cond, mean(wta_list(:, cond), 1), 'FaceColor', [0.6 0.6 0.6]);
     ylabelarray{cond} = ['tau=', num2str(taus(cond))];
 end
 xlabel('Winner-take-all index','FontSize',20)
 set(gca,'YTick', 1:numel(taus), 'YLim', [0 numel(taus)+1], 'XTick', [0 .2 .4 .6 .8 1], 'XLim', [0 1], 'FontSize', 14)
-set(gca,'YTickLabel', ylabel_array);
+set(gca,'YTickLabel', ylabelarray);
 set(gca,'FontSize',20);

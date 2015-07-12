@@ -1,4 +1,4 @@
-function [p] = n_model(p)
+function [p] = n_model_inhibition(p)
 %This function is called by n_runModel.m
 %The word 'layer' is used in the following sense:
 %Layer 1 = Left monocular neurons
@@ -20,20 +20,20 @@ for t = p.dt:p.dt:p.T
         
         %defining inputs (stimulus and recurrent connections)
         if lay==1     %left eye      
-            inpA = p.iA{lay}(idx) - p.rA{5}(idx-1) - p.rB{5}(idx-1);
-            inpB = p.iB{lay}(idx) - p.rA{5}(idx-1) - p.rB{5}(idx-1);
+            inpA = p.iA{lay}(idx) - p.inhib_gain * p.rA{5}(idx-1) - p.inhib_gain * p.rB{5}(idx-1);
+            inpB = p.iB{lay}(idx) - p.inhib_gain * p.rA{5}(idx-1) - p.inhib_gain * p.rB{5}(idx-1);
         elseif lay==2 %right eye
-            inpA = p.iA{lay}(idx) - p.rA{4}(idx-1) - p.rB{4}(idx-1);
-            inpB = p.iB{lay}(idx) - p.rA{4}(idx-1) - p.rB{4}(idx-1);
+            inpA = p.iA{lay}(idx) - p.inhib_gain * p.rA{4}(idx-1) - p.inhib_gain * p.rB{4}(idx-1);
+            inpB = p.iB{lay}(idx) - p.inhib_gain * p.rA{4}(idx-1) - p.inhib_gain * p.rB{4}(idx-1);
         elseif lay==3 %summation layer
             inpA = p.rA{1}(idx) + p.rA{2}(idx);
             inpB = p.rB{1}(idx) + p.rB{2}(idx);
         elseif lay==4 %opponency layer (left-right)
-            inpA = p.rA{1}(idx) - p.rA{2}(idx);
-            inpB = p.rB{1}(idx) - p.rB{2}(idx);
+            inpA = p.rA{1}(idx) - p.inhib_gain * p.rA{2}(idx);
+            inpB = p.rB{1}(idx) - p.inhib_gain * p.rB{2}(idx);
         elseif lay==5 %opponency layer (right-left)
-            inpA = p.rA{2}(idx) - p.rA{1}(idx);
-            inpB = p.rB{2}(idx) - p.rB{1}(idx);
+            inpA = p.rA{2}(idx) - p.inhib_gain * p.rA{1}(idx);
+            inpB = p.rB{2}(idx) - p.inhib_gain * p.rB{1}(idx);
         end
 
         %updating drives
@@ -50,8 +50,8 @@ for t = p.dt:p.dt:p.T
         end
         
         %normalization
-        fA = halfExp(p.dA{lay}(idx),2) / (sum(halfExp(pool,2)));
-        fB = halfExp(p.dB{lay}(idx),2) / (sum(halfExp(pool,2)));
+        fA = halfExp(p.dA{lay}(idx),2) / (p.inhib_gain * sum(halfExp(pool,2)));
+        fB = halfExp(p.dB{lay}(idx),2) / (p.inhib_gain * sum(halfExp(pool,2)));
     
         %update firing rates
         p.rA{lay}(idx) = p.rA{lay}(idx-1) + (p.dt/p.tau)*(-p.rA{lay}(idx-1) + fA);

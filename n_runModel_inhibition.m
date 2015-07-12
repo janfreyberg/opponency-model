@@ -1,4 +1,4 @@
-function [] = n_runModel()
+function [] = n_runModel_inhibition()
 %Run this function.
 %This function will loop through 3 conditions: Dichoptic gratings,
 %monocular plaids, and binocular plaids
@@ -15,10 +15,8 @@ function [] = n_runModel()
 %suppression. PLOS Computational Biology.
 
 c = .5; %contrast
-iA_amp_opts = {[0 c]; [c 0]; [c c]}; %dichoptic grating, monocular plaid, binocular plaids
-iB_amp_opts = {[c 0]; [c 0]; [c c]}; %dichoptic grating, monocular plaid, binocular plaids
-condnames =  {'Dich. Gratings', 'Mon. Plaid', 'Bin. Plaid'};
-layernames =  {'L. Monocular', 'R. Monocular', 'Summation', 'L-R Opponency', 'R-L Opponency'};
+iA_amp_opts = [0 c]; %dichoptic grating, monocular plaid, binocular plaids
+iB_amp_opts = [c 0]; %dichoptic grating, monocular plaid, binocular plaids
 p.sigma         = .5;       %semisaturation constant
 p.sigma_opp     = .9;       %semisaturation constant for opponency cells
 p.tau           = 50;       %time constant (ms)
@@ -30,57 +28,60 @@ p.nLayers       = 5;        %set to 3 for conventional model, 5 for opponency mo
 p.nt            = p.T/p.dt+1;
 p.tlist         = 0:p.dt:p.T;
 
-%Initializing time-courses for neuron (d)rives, (r)esponses, and (n)oise.
-%Each neuron is tuned to either orientation A or B.
-for lay=1:5 %go through maximum possible layers. This way, if there are <5 layers, the feedback can be zero.
-    p.dA{lay}   = zeros(1,p.nt);
-    p.dB{lay}   = zeros(1,p.nt);
-    p.rA{lay}   = zeros(1,p.nt);
-    p.rB{lay}   = zeros(1,p.nt);
-    p.nA{lay}   = n_makeNoise(p);
-    p.nB{lay}   = n_makeNoise(p);
-end
+% The variable we compare
+inhibgains = [1, 0.9, 0.8];
+
+niter = 10;
+wta_list = zeros(niter, numel(inhibgains));
 
 
-subplotlocs = [4 6 2 1 3]; %on a 2x3 plot
+fprintf('Iteration: 0\n'); % display progress at cmd
+for iter = 1:niter
+fprintf(['\b\b', num2str(iter), '\n']); % update progress
+
+
+
 
 %loop through conditions
-for cond = 1:3;
+for cond = 1:numel(inhibgains);
+    %Initializing time-courses for neuron (d)rives, (r)esponses, and (n)oise.
+    %Each neuron is tuned to either orientation A or B.
+    for lay=1:5 %go through maximum possible layers. This way, if there are <5 layers, the feedback can be zero.
+        p.dA{lay}   = zeros(1,p.nt);
+        p.dB{lay}   = zeros(1,p.nt);
+        p.rA{lay}   = zeros(1,p.nt);
+        p.rB{lay}   = zeros(1,p.nt);
+        p.nA{lay}   = n_makeNoise(p);
+        p.nB{lay}   = n_makeNoise(p);
+    end
+
+    p.inhib_gain = inhibgains(cond);
+    
     %stimulus inputs to monocular layers
     for lay = 1:2
-        p.iA{lay} = iA_amp_opts{cond}(lay)*ones(1,p.nt);
-        p.iB{lay} = iB_amp_opts{cond}(lay)*ones(1,p.nt);
+        p.iA{lay} = iA_amp_opts(lay)*ones(1,p.nt);
+        p.iB{lay} = iB_amp_opts(lay)*ones(1,p.nt);
     end
      
     %run the model
-    p = n_model(p);
+    p = n_model_inhibition(p);
     
     %compute WTA index from summation layer
-    wta(cond) = nanmean(abs(p.rA{3}-p.rB{3})./(p.rA{3}+p.rB{3}));
+    wta_list(iter, cond) = nanmean(abs(p.rA{3}-p.rB{3})./(p.rA{3}+p.rB{3}));
 
-    cpsFigure(3,1)
-    set(gcf,'Name',condnames{cond})
-    for lay = 1:p.nLayers
-        subplot(2,3,subplotlocs(lay))
-        cla; hold on;
-        p1 = plot(p.tlist/1000,p.rA{lay},'color',[1 0 1]);
-        p2 = plot(p.tlist/1000,p.rB{lay},'color',[0 0 1]);
-        legend([p1 p2], 'A','B')
-        ylabel('Firing rate')
-        xlabel('Time (s)')
-        title(layernames(lay))
-        set(gca,'YLim',[0 1]);
-    end
 end
 
+end
 
 figure
 cla; hold on;
-barh(3,wta(1), 'FaceColor', [.6 .6 .6]);
-barh(2,wta(2), 'FaceColor', [.6 .6 .6]);
-barh(1,wta(3), 'FaceColor', [.6 .6 .6]);
+ylabelarray = cell(1, numel(inhibgains));
+for cond = 1:numel(inhibgains);
+    barh(cond, mean(wta_list(:, cond), 1), 'FaceColor', [.6 .6 .6]);
+    ylabelarray{cond} = ['inhib=', num2str(inhibgains(cond))];
+end
 xlabel('Winner-take-all index','FontSize',20)
-set(gca,'YTick', [1 2 3], 'YLim', [.3 3.7], 'XTick', [0 .2 .4 .6 .8 1], 'XLim', [0 1], 'FontSize', 14)
-set(gca,'YTickLabel', {'Bin. plaids', 'Mon. plaid', 'Dich. gratings'});
+set(gca,'YTick', 1:numel(inhibgains), 'YLim', [0, numel(inhibgains)+1], 'XTick', [0 .2 .4 .6 .8 1], 'XLim', [0 1], 'FontSize', 14)
+set(gca,'YTickLabel', ylabelarray);
 set(gca,'FontSize',20);
 
