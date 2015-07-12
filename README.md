@@ -1,6 +1,6 @@
-Branch: "master"
+Branch: "compare-perturbations"
 -------------
-This branch is untouched from original code.
+This branch compares three perturbations possibly present in autism: Increased/Decreased noise, decreased adaptation, and decreased inhibition.
 
 Instructions
 -------------
