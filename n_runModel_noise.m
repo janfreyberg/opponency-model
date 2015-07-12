@@ -21,31 +21,36 @@ condnames =  {'Dich. Gratings', 'Mon. Plaid', 'Bin. Plaid'};
 layernames =  {'L. Monocular', 'R. Monocular', 'Summation', 'L-R Opponency', 'R-L Opponency'};
 p.sigma         = .5;       %semisaturation constant
 p.sigma_opp     = .9;       %semisaturation constant for opponency cells
-taus = [50, 100, 150]; %time constants that are iterated through (ms)
+p.tau           = 50;       %time constant (ms)
 p.dt            = 5;        %time-step (ms)
 p.T             = 20000;    %duration (ms)
 p.noisefilter_t = 800;      %(ms)
-p.noiseamp      = .03;      
+noiseamps = [0.03, 0.05, 0.07, 0.09];
 p.nLayers       = 5;        %set to 3 for conventional model, 5 for opponency model
 p.nt            = p.T/p.dt+1;
 p.tlist         = 0:p.dt:p.T;
+niter = 10;
+wta_list = zeros(niter, numel(noiseamps));
 
-%Initializing time-courses for neuron (d)rives, (r)esponses, and (n)oise.
-%Each neuron is tuned to either orientation A or B.
-for lay=1:5 %go through maximum possible layers. This way, if there are <5 layers, the feedback can be zero.
-    p.dA{lay}   = zeros(1,p.nt);
-    p.dB{lay}   = zeros(1,p.nt);
-    p.rA{lay}   = zeros(1,p.nt);
-    p.rB{lay}   = zeros(1,p.nt);
-    p.nA{lay}   = n_makeNoise(p);
-    p.nB{lay}   = n_makeNoise(p);
-end
-
-
+fprintf('Iteration: 0'); % display progress at cmd
+for iter = 1:niter
+fprintf(['\b', num2str(iter)]); % update progress
 
 %loop through conditions
-for cond = 1:numel(taus);
-    p.tau = taus(cond);
+for cond = 1:numel(noiseamps);
+    p.noiseamp = noiseamps(cond);
+    
+    %Initializing time-courses for neuron (d)rives, (r)esponses, and (n)oise.
+    %Each neuron is tuned to either orientation A or B.
+    for lay=1:5 %go through maximum possible layers. This way, if there are <5 layers, the feedback can be zero.
+        p.dA{lay}   = zeros(1,p.nt);
+        p.dB{lay}   = zeros(1,p.nt);
+        p.rA{lay}   = zeros(1,p.nt);
+        p.rB{lay}   = zeros(1,p.nt);
+        p.nA{lay}   = n_makeNoise(p);
+        p.nB{lay}   = n_makeNoise(p);
+    end
+
     %stimulus inputs to monocular layers
     for lay = 1:2
         p.iA{lay} = iA_amp_opts(lay)*ones(1,p.nt);
@@ -56,33 +61,20 @@ for cond = 1:numel(taus);
     p = n_model(p);
     
     %compute WTA index from summation layer
-    wta(cond) = nanmean(abs(p.rA{3}-p.rB{3})./(p.rA{3}+p.rB{3}));
-
-%     cpsFigure(3,1)
-%     set(gcf,'Name',condnames{cond})
-%     for lay = 1:p.nLayers
-%         subplot(2,3,subplotlocs(lay))
-%         cla; hold on;
-%         p1 = plot(p.tlist/1000,p.rA{lay},'color',[1 0 1]);
-%         p2 = plot(p.tlist/1000,p.rB{lay},'color',[0 0 1]);
-%         legend([p1 p2], 'A','B')
-%         ylabel('Firing rate')
-%         xlabel('Time (s)')
-%         title(layernames(lay))
-%         set(gca,'YLim',[0 1]);
-%     end
+    wta_list(iter, cond) = nanmean(abs(p.rA{3}-p.rB{3})./(p.rA{3}+p.rB{3}));
 end
 
+end
 
 figure
 cla; hold on;
-ylabel_array = {};
-for cond = 1:numel(taus)
-    barh(cond, wta(cond), 'FaceColor', [0.6 0.6 0.6]);
-    ylabel_array = [ylabel_array, {['tau=', num2str(taus(cond))]}];
+ylabelarray = cell(1, numel(noiseamps));
+for cond = 1:numel(noiseamps);
+    barh(cond, mean(wta_list(:, cond), 1), 'FaceColor', [.6 .6 .6]);
+    ylabelarray{cond} = ['noise=', num2str(noiseamps(cond))];
 end
 xlabel('Winner-take-all index','FontSize',20)
-set(gca,'YTick', 1:numel(taus), 'YLim', [0 numel(taus)+1], 'XTick', [0 .2 .4 .6 .8 1], 'XLim', [0 1], 'FontSize', 14)
-set(gca,'YTickLabel', ylabel_array);
+set(gca,'YTick', 1:numel(noiseamps), 'YLim', [0, numel(noiseamps)+1], 'XTick', [0 .2 .4 .6 .8 1], 'XLim', [0 1], 'FontSize', 14)
+set(gca,'YTickLabel', ylabelarray);
 set(gca,'FontSize',20);
 
