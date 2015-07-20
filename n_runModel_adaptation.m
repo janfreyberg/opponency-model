@@ -1,4 +1,3 @@
-function [] = n_runModel_adaptation()
 %Run this function.
 %This function will loop through 3 conditions: Dichoptic gratings,
 %monocular plaids, and binocular plaids
@@ -17,6 +16,8 @@ function [] = n_runModel_adaptation()
 c = .5; %contrast
 iA_amp_opts = [0 c]; %dichoptic grating, monocular plaid, binocular plaids
 iB_amp_opts = [c 0]; %dichoptic grating, monocular plaid, binocular plaids
+condnames =  {'50 ms adaptation', '100 ms adaptation', '150 ms adaptation'};
+layernames =  {'L. Monocular', 'R. Monocular', 'Summation', 'L-R Opponency', 'R-L Opponency'};
 p.sigma         = .5;       %semisaturation constant
 p.sigma_opp     = .9;       %semisaturation constant for opponency cells
 taus = [50, 100, 150]; %time constants that are iterated through (ms)
@@ -27,13 +28,14 @@ p.noiseamp      = .03;
 p.nLayers       = 5;        %set to 3 for conventional model, 5 for opponency model
 p.nt            = p.T/p.dt+1;
 p.tlist         = 0:p.dt:p.T;
-niter = 10;
+niter = 50;
+drawn_iter = randi([1 niter]);
 wta_list = zeros(niter, numel(taus));
 
 
 fprintf('Iteration: 0\n'); % display progress at cmd
 for iter = 1:niter
-fprintf(['\b\b', num2str(iter), '\n']); % update progress
+fprintf([repmat('\b', 1, 1+length(num2str(iter-1))), num2str(iter), '\n']); % update progress
 
 
 %loop through conditions
@@ -63,21 +65,20 @@ for cond = 1:numel(taus);
     %compute WTA index from summation layer
     wta_list(iter, cond) = nanmean(abs(p.rA{3}-p.rB{3})./(p.rA{3}+p.rB{3}));
 
-%     cpsFigure(3,1)
-%     set(gcf,'Name',condnames{cond})
-%     for lay = 1:p.nLayers
-%         subplot(2,3,subplotlocs(lay))
-%         cla; hold on;
-%         p1 = plot(p.tlist/1000,p.rA{lay},'color',[1 0 1]);
-%         p2 = plot(p.tlist/1000,p.rB{lay},'color',[0 0 1]);
-%         legend([p1 p2], 'A','B')
-%         ylabel('Firing rate')
-%         xlabel('Time (s)')
-%         title(layernames(lay))
-%         set(gca,'YLim',[0 1]);
-%     end
+if iter == drawn_iter
+        subplot(numel(taus), 1, cond);
+        hold on;
+        title(['Adaptation Constant = ', num2str(p.tau), 'ms']);
+        p1 = plot(p.tlist/1000,p.rA{3},'color',[1 0 1]);
+        p2 = plot(p.tlist/1000,p.rB{3},'color',[0 0 1]);
+        legend([p1 p2], 'A','B');
+        ylabel('Firing rate');
+        xlabel('Time (s)');
+        set(gca,'YLim',[0 1]);
+        drawnow;
 end
 
+end
 end
 
 

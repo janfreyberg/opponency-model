@@ -1,4 +1,3 @@
-function [] = n_runModel_inhibition()
 %Run this function.
 %This function will loop through 3 conditions: Dichoptic gratings,
 %monocular plaids, and binocular plaids
@@ -17,8 +16,8 @@ function [] = n_runModel_inhibition()
 c = .5; %contrast
 iA_amp_opts = [0 c]; %dichoptic grating, monocular plaid, binocular plaids
 iB_amp_opts = [c 0]; %dichoptic grating, monocular plaid, binocular plaids
-p.sigma         = .5;       %semisaturation constant
-p.sigma_opp     = .9;       %semisaturation constant for opponency cells
+condnames =  {'Full inhibition', 'Intermediate inhibition', 'Low inhibition'};
+layernames =  {'L. Monocular', 'R. Monocular', 'Summation', 'L-R Opponency', 'R-L Opponency'};
 p.tau           = 50;       %time constant (ms)
 p.dt            = 5;        %time-step (ms)
 p.T             = 20000;    %duration (ms)
@@ -29,17 +28,20 @@ p.nt            = p.T/p.dt+1;
 p.tlist         = 0:p.dt:p.T;
 
 % The variable we compare
-inhibgains = [1, 0.9, 0.8];
+inhibgains = [1, 0.95, 0.9];
 
-niter = 10;
+niter = 100;
+drawn_iter = randi([1 niter]);
 wta_list = zeros(niter, numel(inhibgains));
 
 
 fprintf('Iteration: 0\n'); % display progress at cmd
 for iter = 1:niter
-fprintf(['\b\b', num2str(iter), '\n']); % update progress
+fprintf([repmat('\b', 1, 1+length(num2str(iter-1))), num2str(iter), '\n']); % update progress
 
-
+if iter == 2
+    figure;
+end
 
 
 %loop through conditions
@@ -56,6 +58,8 @@ for cond = 1:numel(inhibgains);
     end
 
     p.inhib_gain = inhibgains(cond);
+    p.sigma         = .5;       %semisaturation constant
+    p.sigma_opp     = .9;       %semisaturation constant for opponency cells
     
     %stimulus inputs to monocular layers
     for lay = 1:2
@@ -68,7 +72,19 @@ for cond = 1:numel(inhibgains);
     
     %compute WTA index from summation layer
     wta_list(iter, cond) = nanmean(abs(p.rA{3}-p.rB{3})./(p.rA{3}+p.rB{3}));
-
+    
+    if iter == drawn_iter
+        subplot(numel(inhibgains), 1, cond);
+        hold on;
+        title(['Inhibitory Gain = ', num2str(p.inhib_gain*100), '%']);
+        p1 = plot(p.tlist/1000,p.rA{3},'color',[1 0 1]);
+        p2 = plot(p.tlist/1000,p.rB{3},'color',[0 0 1]);
+        legend([p1 p2], 'A','B');
+        ylabel('Firing rate');
+        xlabel('Time (s)');
+        set(gca,'YLim',[0 1]);
+        drawnow;
+    end
 end
 
 end
@@ -78,9 +94,10 @@ cla; hold on;
 ylabelarray = cell(1, numel(inhibgains));
 for cond = 1:numel(inhibgains);
     barh(cond, mean(wta_list(:, cond), 1), 'FaceColor', [.6 .6 .6]);
-    ylabelarray{cond} = ['inhib=', num2str(inhibgains(cond))];
+    ylabelarray{cond} = [num2str(inhibgains(cond)*100), '%'];
 end
-xlabel('Winner-take-all index','FontSize',20)
+xlabel('Winner-take-all index', 'FontSize', 20);
+ylabel('Inhibitory Gain', 'FontSize', 20);
 set(gca,'YTick', 1:numel(inhibgains), 'YLim', [0, numel(inhibgains)+1], 'XTick', [0 .2 .4 .6 .8 1], 'XLim', [0 1], 'FontSize', 14)
 set(gca,'YTickLabel', ylabelarray);
 set(gca,'FontSize',20);

@@ -35,18 +35,21 @@ for t = p.dt:p.dt:p.T
             inpA = p.rA{2}(idx) - p.inhib_gain * p.rA{1}(idx);
             inpB = p.rB{2}(idx) - p.inhib_gain * p.rB{1}(idx);
         end
-
+        
         %updating drives
         p.dA{lay}(idx) = p.dA{lay}(idx-1) + (p.dt/p.tau)*(-p.dA{lay}(idx-1) + inpA + p.nA{lay}(idx));
         p.dB{lay}(idx) = p.dB{lay}(idx-1) + (p.dt/p.tau)*(-p.dB{lay}(idx-1) + inpB + p.nB{lay}(idx));
-         
+        
         %defining normalization pool for each layer
         if lay<=2 %monocular
-            pool = [p.sigma, p.dA{1}(idx-1), p.dB{1}(idx-1), p.dA{2}(idx-1), p.dB{2}(idx-1)];
+            pool = [p.dA{1}(idx-1), p.dB{1}(idx-1), p.dA{2}(idx-1), p.dB{2}(idx-1)];
+            pool = [p.sigma, pool];
         elseif lay==3 %summation
-            pool = [p.sigma, p.dA{3}(idx-1), p.dB{3}(idx-1)];
+            pool = [p.dA{3}(idx-1), p.dB{3}(idx-1)];
+            pool = [p.sigma, pool];
         elseif lay>=4 %opponency
-            pool = [p.sigma_opp, p.dA{lay}(idx-1), p.dB{lay}(idx-1)];
+            pool = [p.dA{lay}(idx-1), p.dB{lay}(idx-1)];
+            pool = [p.sigma_opp, pool];
         end
         
         %normalization
