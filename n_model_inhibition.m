@@ -46,12 +46,12 @@ for t = p.dt:p.dt:p.T
         elseif lay==3 %summation
             pool = [p.sigma, p.dA{3}(idx-1), p.dB{3}(idx-1)];
         elseif lay>=4 %opponency
-            pool = [p.sigma_opp, p.dA{4}(idx-1), p.dB{4}(idx-1)];
+            pool = [p.sigma_opp, p.dA{lay}(idx-1), p.dB{lay}(idx-1)];
         end
         
         %normalization
-        fA = halfExp(p.dA{lay}(idx),2) / (p.inhib_gain * sum(halfExp(pool,2)));
-        fB = halfExp(p.dB{lay}(idx),2) / (p.inhib_gain * sum(halfExp(pool,2)));
+        fA = halfExp(p.dA{lay}(idx),2) / (sum(halfExp(pool,2)));
+        fB = halfExp(p.dB{lay}(idx),2) / (sum(halfExp(pool,2)));
     
         %update firing rates
         p.rA{lay}(idx) = p.rA{lay}(idx-1) + (p.dt/p.tau)*(-p.rA{lay}(idx-1) + fA);

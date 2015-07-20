@@ -46,7 +46,7 @@ for t = p.dt:p.dt:p.T
         elseif lay==3 %summation
             pool = [p.sigma, p.dA{3}(idx-1), p.dB{3}(idx-1)];
         elseif lay>=4 %opponency
-            pool = [p.sigma_opp, p.dA{4}(idx-1), p.dB{4}(idx-1)];
+            pool = [p.sigma_opp, p.dA{lay}(idx-1), p.dB{lay}(idx-1)];
         end
         
         %normalization
