@@ -1,3 +1,5 @@
+function [wta_list, mixdur, domdur, reverses, switches] = n_runModel_inhibition(p)
+
 %Run this function.
 %This function will loop through 3 conditions: Dichoptic gratings,
 %monocular plaids, and binocular plaids
@@ -13,35 +15,28 @@
 %Said and Heeger (2013) A model of binocular rivalry and cross-orientation
 %suppression. PLOS Computational Biology.
 
+% clearvars;
 c = .5; %contrast
 iA_amp_opts = [0 c]; %dichoptic grating, monocular plaid, binocular plaids
 iB_amp_opts = [c 0]; %dichoptic grating, monocular plaid, binocular plaids
-condnames =  {'Full inhibition', 'Intermediate inhibition', 'Low inhibition'};
-layernames =  {'L. Monocular', 'R. Monocular', 'Summation', 'L-R Opponency', 'R-L Opponency'};
-p.tau           = 50;       %time constant (ms)
-p.dt            = 5;        %time-step (ms)
-p.T             = 20000;    %duration (ms)
-p.noisefilter_t = 800;      %(ms)
-p.noiseamp      = .03;      
-p.nLayers       = 5;        %set to 3 for conventional model, 5 for opponency model
-p.nt            = p.T/p.dt+1;
-p.tlist         = 0:p.dt:p.T;
 
 % The variable we compare
-inhibgains = [1, 0.95, 0.9];
+inhibgains = p.inhibvars;
 
-niter = 100;
-drawn_iter = randi([1 niter]);
-wta_list = zeros(niter, numel(inhibgains));
+% p.niter = 50;
+drawn_iter = 0;%randi([1 p.niter]);
+wta_list = zeros(p.niter, numel(inhibgains));
+mixdur = zeros(p.niter, numel(inhibgains));
+domdur = zeros(p.niter, numel(inhibgains));
+switches = zeros(p.niter, numel(inhibgains));
+reverses = zeros(p.niter, numel(inhibgains));
+
 
 
 fprintf('Iteration: 0\n'); % display progress at cmd
-for iter = 1:niter
+for iter = 1:p.niter
 fprintf([repmat('\b', 1, 1+length(num2str(iter-1))), num2str(iter), '\n']); % update progress
 
-if iter == 2
-    figure;
-end
 
 
 %loop through conditions
@@ -72,6 +67,8 @@ for cond = 1:numel(inhibgains);
     
     %compute WTA index from summation layer
     wta_list(iter, cond) = nanmean(abs(p.rA{3}-p.rB{3})./(p.rA{3}+p.rB{3}));
+    % compute average duration of mix and dominant percepts
+    [mixdur(iter, cond), domdur(iter, cond), switches(iter, cond), reverses(iter, cond)] = parse_summation(p);
     
     if iter == drawn_iter
         subplot(numel(inhibgains), 1, cond);
@@ -89,16 +86,65 @@ end
 
 end
 
-figure
-cla; hold on;
-ylabelarray = cell(1, numel(inhibgains));
-for cond = 1:numel(inhibgains);
-    barh(cond, mean(wta_list(:, cond), 1), 'FaceColor', [.6 .6 .6]);
-    ylabelarray{cond} = [num2str(inhibgains(cond)*100), '%'];
-end
-xlabel('Winner-take-all index', 'FontSize', 20);
-ylabel('Inhibitory Gain', 'FontSize', 20);
-set(gca,'YTick', 1:numel(inhibgains), 'YLim', [0, numel(inhibgains)+1], 'XTick', [0 .2 .4 .6 .8 1], 'XLim', [0 1], 'FontSize', 14)
-set(gca,'YTickLabel', ylabelarray);
-set(gca,'FontSize',20);
-
+%% Plot
+% figure
+% cla;
+% subplot(5, 1, 1); hold on;
+% ylabelarray = cell(1, numel(inhibgains));
+% for cond = 1:numel(inhibgains);
+%     barh(cond, mean(wta_list(:, cond), 1), 'FaceColor', [.6 .6 .6]);
+%     ylabelarray{cond} = [num2str(inhibgains(cond)*100), '%'];
+% end
+% xlabel('Winner-take-all index', 'FontSize', 20);
+% % ylabel('Inhibitory Gain', 'FontSize', 20);
+% set(gca,'YTick', 1:numel(inhibgains), 'YLim', [0, numel(inhibgains)+1], 'XTick', [0 .2 .4 .6 .8 1], 'XLim', [0 1], 'FontSize', 14)
+% set(gca,'YTickLabel', ylabelarray);
+% set(gca,'FontSize',20);
+% 
+% subplot(5, 1, 2); hold on;
+% ylabelarray = cell(1, numel(inhibgains));
+% for cond = 1:numel(inhibgains)
+%     barh(cond, mean(mixdur(:, cond), 1), 'FaceColor', [0.6 0.6 0.6]);
+%     ylabelarray{cond} = [num2str(inhibgains(cond)*100), '%'];
+% end
+% xlabel('Average Mix Dur','FontSize',20);
+% ylabel('Inhibitory Gain', 'FontSize', 20);
+% set(gca,'YTick', 1:numel(inhibgains), 'YLim', [0 numel(inhibgains)+1], 'XTick', 0:5, 'XLim', [0 5], 'FontSize', 14)
+% set(gca,'YTickLabel', ylabelarray);
+% set(gca,'FontSize',20);
+% 
+% subplot(5, 1, 3); hold on;
+% ylabelarray = cell(1, numel(inhibgains));
+% for cond = 1:numel(inhibgains)
+%     barh(cond, mean(domdur(:, cond), 1), 'FaceColor', [0.6 0.6 0.6]);
+%     ylabelarray{cond} = [num2str(inhibgains(cond)*100), '%'];
+% end
+% xlabel('Average Dom Dur','FontSize',20);
+% % ylabel('Inhibitory Gain', 'FontSize', 20);
+% set(gca,'YTick', 1:numel(inhibgains), 'YLim', [0 numel(inhibgains)+1], 'XTick', 0:5, 'XLim', [0 5], 'FontSize', 14)
+% set(gca,'YTickLabel', ylabelarray);
+% set(gca,'FontSize',20);
+% 
+% subplot(5, 1, 4); hold on;
+% ylabelarray = cell(1, numel(inhibgains));
+% for cond = 1:numel(inhibgains)
+%     barh(cond, mean(reverses(:, cond), 1)/(0.001*p.T), 'FaceColor', [0.6 0.6 0.6]);
+%     ylabelarray{cond} = [num2str(inhibgains(cond)*100), '%'];
+% end
+% xlabel('Reversions','FontSize',20);
+% % ylabel('Inhibitory Gain', 'FontSize', 20);
+% set(gca,'YTick', 1:numel(inhibgains), 'YLim', [0 numel(inhibgains)+1], 'XTick', 0:0.2:1, 'XLim', [0 1], 'FontSize', 14)
+% set(gca,'YTickLabel', ylabelarray);
+% set(gca,'FontSize',20);
+% 
+% subplot(5, 1, 5); hold on;
+% ylabelarray = cell(1, numel(inhibgains));
+% for cond = 1:numel(inhibgains)
+%     barh(cond, mean(switches(:, cond), 1)/(0.001*p.T), 'FaceColor', [0.6 0.6 0.6]);
+%     ylabelarray{cond} = [num2str(inhibgains(cond)*100), '%'];
+% end
+% xlabel('Switches','FontSize',20);
+% % ylabel('Inhibitory Gain', 'FontSize', 20);
+% set(gca,'YTick', 1:numel(inhibgains), 'YLim', [0 numel(inhibgains)+1], 'XTick', 0:0.2:1, 'XLim', [0 1], 'FontSize', 14)
+% set(gca,'YTickLabel', ylabelarray);
+% set(gca,'FontSize',20);

@@ -1,3 +1,5 @@
+function [wta_list, mixdur, domdur, reverses, switches] = n_runModel_adaptation(p)
+
 %Run this function.
 %This function will loop through 3 conditions: Dichoptic gratings,
 %monocular plaids, and binocular plaids
@@ -16,25 +18,21 @@
 c = .5; %contrast
 iA_amp_opts = [0 c]; %dichoptic grating, monocular plaid, binocular plaids
 iB_amp_opts = [c 0]; %dichoptic grating, monocular plaid, binocular plaids
-condnames =  {'50 ms adaptation', '100 ms adaptation', '150 ms adaptation'};
-layernames =  {'L. Monocular', 'R. Monocular', 'Summation', 'L-R Opponency', 'R-L Opponency'};
-p.sigma         = .5;       %semisaturation constant
-p.sigma_opp     = .9;       %semisaturation constant for opponency cells
-taus = [50, 100, 150]; %time constants that are iterated through (ms)
-p.dt            = 5;        %time-step (ms)
-p.T             = 20000;    %duration (ms)
-p.noisefilter_t = 800;      %(ms)
-p.noiseamp      = .03;      
-p.nLayers       = 5;        %set to 3 for conventional model, 5 for opponency model
-p.nt            = p.T/p.dt+1;
-p.tlist         = 0:p.dt:p.T;
-niter = 50;
-drawn_iter = randi([1 niter]);
-wta_list = zeros(niter, numel(taus));
+
+drawn_iter = 0;
+
+taus = p.adaptationvars;
+
+% preallocate
+wta_list = zeros(p.niter, numel(taus));
+mixdur = zeros(p.niter, numel(taus));
+domdur = zeros(p.niter, numel(taus));
+switches = zeros(p.niter, numel(taus));
+reverses = zeros(p.niter, numel(taus));
 
 
 fprintf('Iteration: 0\n'); % display progress at cmd
-for iter = 1:niter
+for iter = 1:p.niter
 fprintf([repmat('\b', 1, 1+length(num2str(iter-1))), num2str(iter), '\n']); % update progress
 
 
@@ -64,6 +62,8 @@ for cond = 1:numel(taus);
     
     %compute WTA index from summation layer
     wta_list(iter, cond) = nanmean(abs(p.rA{3}-p.rB{3})./(p.rA{3}+p.rB{3}));
+    % compute average duration of mix and dominant percepts
+    [mixdur(iter, cond), domdur(iter, cond), switches(iter, cond), reverses(iter, cond)] = parse_summation(p);
 
 if iter == drawn_iter
         subplot(numel(taus), 1, cond);
@@ -81,15 +81,65 @@ end
 end
 end
 
-
-figure
-cla; hold on;
-ylabelarray = cell(1, numel(taus));
-for cond = 1:numel(taus)
-    barh(cond, mean(wta_list(:, cond), 1), 'FaceColor', [0.6 0.6 0.6]);
-    ylabelarray{cond} = ['tau=', num2str(taus(cond))];
-end
-xlabel('Winner-take-all index','FontSize',20)
-set(gca,'YTick', 1:numel(taus), 'YLim', [0 numel(taus)+1], 'XTick', [0 .2 .4 .6 .8 1], 'XLim', [0 1], 'FontSize', 14)
-set(gca,'YTickLabel', ylabelarray);
-set(gca,'FontSize',20);
+%% Plot
+% figure;
+% cla;
+% subplot(5, 1, 1); hold on;
+% ylabelarray = cell(1, numel(taus));
+% for cond = 1:numel(taus)
+%     barh(cond, mean(wta_list(:, cond), 1), 'FaceColor', [0.6 0.6 0.6]);
+%     ylabelarray{cond} = [num2str(taus(cond)), 'ms'];
+% end
+% xlabel('Winner-take-all index','FontSize',20);
+% % ylabel('Adaptation Time Constant','FontSize',20);
+% set(gca,'YTick', 1:numel(taus), 'YLim', [0 numel(taus)+1], 'XTick', [0 .2 .4 .6 .8 1], 'XLim', [0 1], 'FontSize', 14)
+% set(gca,'YTickLabel', ylabelarray);
+% set(gca,'FontSize',20);
+% 
+% subplot(5, 1, 2); hold on;
+% ylabelarray = cell(1, numel(taus));
+% for cond = 1:numel(taus)
+%     barh(cond, mean(wta_list(:, cond), 1), 'FaceColor', [0.6 0.6 0.6]);
+%     ylabelarray{cond} = [num2str(taus(cond)), 'ms'];
+% end
+% xlabel('Average Mix Dur','FontSize',20);
+% ylabel('Adaptation Time Constant','FontSize',20);
+% set(gca,'YTick', 1:numel(taus), 'YLim', [0 numel(taus)+1], 'XTick', 0:5, 'XLim', [0 5], 'FontSize', 14)
+% set(gca,'YTickLabel', ylabelarray);
+% set(gca,'FontSize',20);
+% 
+% subplot(5, 1, 3); hold on;
+% ylabelarray = cell(1, numel(taus));
+% for cond = 1:numel(taus)
+%     barh(cond, mean(domdur(:, cond), 1), 'FaceColor', [0.6 0.6 0.6]);
+%     ylabelarray{cond} = [num2str(taus(cond)), 'ms'];
+% end
+% xlabel('Average Dom Dur','FontSize',20);
+% % ylabel('Adaptation Time Constant','FontSize',20);
+% set(gca,'YTick', 1:numel(taus), 'YLim', [0 numel(taus)+1], 'XTick', 0:5, 'XLim', [0 5], 'FontSize', 14)
+% set(gca,'YTickLabel', ylabelarray);
+% set(gca,'FontSize',20);
+% 
+% subplot(5, 1, 4); hold on;
+% ylabelarray = cell(1, numel(taus));
+% for cond = 1:numel(taus)
+%     barh(cond, mean(reverses(:, cond), 1)/(0.001*p.T), 'FaceColor', [0.6 0.6 0.6]);
+%     ylabelarray{cond} = [num2str(taus(cond)), 'ms'];
+% end
+% xlabel('Reversions','FontSize',20);
+% % ylabel('Adaptation Time Constant','FontSize',20);
+% set(gca,'YTick', 1:numel(taus), 'YLim', [0 numel(taus)+1], 'XTick', 0:0.2:1, 'XLim', [0 1], 'FontSize', 14)
+% set(gca,'YTickLabel', ylabelarray);
+% set(gca,'FontSize',20);
+% 
+% subplot(5, 1, 5); hold on;
+% ylabelarray = cell(1, numel(taus));
+% for cond = 1:numel(taus)
+%     barh(cond, mean(switches(:, cond), 1)/(0.001*p.T), 'FaceColor', [0.6 0.6 0.6]);
+%     ylabelarray{cond} = [num2str(taus(cond)), 'ms'];
+% end
+% xlabel('Switches','FontSize',20);
+% % ylabel('Adaptation Time Constant','FontSize',20);
+% set(gca,'YTick', 1:numel(taus), 'YLim', [0 numel(taus)+1], 'FontSize', 14)
+% set(gca,'YTickLabel', ylabelarray);
+% set(gca,'FontSize',20);
