@@ -58,8 +58,8 @@ for plotvar = 1:n_subplots
     ylabelarray = cell(1, conditions);
     
     for cond = 1:conditions;
-        barh(cond, mean(plotarray{plotvar}(:, cond), 1), 'FaceColor', 1-0.8*[cond/conditions, cond/conditions, cond/conditions]);
-        ylabelarray{cond} = num2str(model.params(cond));
+        barh(cond, nanmean(plotarray{plotvar}(:, cond), 1), 'FaceColor', 1-0.8*[cond/conditions, cond/conditions, cond/conditions]);
+        ylabelarray{cond} = num2str(model.params(cond), '%1.2f');
     end
     
     if plotvar == ceil(n_subplots/2)
